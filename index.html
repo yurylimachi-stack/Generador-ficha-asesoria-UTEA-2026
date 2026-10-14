@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Asesoría de Tesis</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f0f4f8',
+                            100: '#d9e2ec',
+                            600: '#1e3a8a',
+                            700: '#1e3a5f',
+                            800: '#0f172a',
+                            900: '#0b1329',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom print formatting for A4 paper layout */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .page-a4 {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 1.5cm !important;
+                width: 100% !important;
+                max-width: none !important;
+                border: none !important;
+            }
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .dotted-line {
+            border-bottom: 1px dotted #6b7280;
+            display: block;
+            width: 100%;
+            min-height: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Application Header -->
+    <header class="bg-navy-900 text-white shadow-md no-print sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center shadow-inner">
+                    <i class="ph-bold ph-student text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Sistema de Asesoría de Tesis</h1>
+                    <p class="text-xs text-slate-300">Gestión e Impresión de Fichas Oficiales</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <button onclick="loadDemoData()" class="text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                    <i class="ph-bold ph-magic-wand text-amber-400"></i>
+                    <span class="hidden sm:inline">Datos Demo</span>
+                </button>
+                <button onclick="createNewFicha()" class="text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 shadow-sm">
+                    <i class="ph-bold ph-plus"></i>
+                    <span>Nueva Ficha</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col md:flex-row gap-6">
+
+        <!-- Sidebar: List & Search (No Print) -->
+        <aside class="w-full md:w-80 lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col no-print h-[calc(100vh-7rem)] sticky top-20">
+            <!-- Search & Filters -->
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-xl space-y-3">
+                <div class="relative">
+                    <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-lg"></i>
+                    <input type="text" id="searchInput" oninput="renderFichasList()" placeholder="Buscar por tesista, N° o tema..." 
+                           class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-500 px-1">
+                    <span id="recordCount">0 Fichas guardadas</span>
+                    <button onclick="confirmClearAll()" class="text-red-500 hover:underline">Borrar todas</button>
+                </div>
+            </div>
+
+            <!-- Fichas List -->
+            <div id="fichasContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- Dynamic cards inserted here -->
+            </div>
+        </aside>
+
+        <!-- Main Workspace (Editor / Preview) -->
+        <main class="flex-1 flex flex-col min-w-0">
+            
+            <!-- Tab Navigation (No Print) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 mb-4 flex items-center justify-between no-print">
+                <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                    <button id="tabFormBtn" onclick="switchTab('form')" class="px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 bg-white shadow-sm text-navy-900">
+                        <i class="ph-bold ph-note-pencil"></i>
+                        <span>Formulario</span>
+                    </button>
+                    <button id="tabPreviewBtn" onclick="switchTab('preview')" class="px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 text-slate-600 hover:text-slate-900">
+                        <i class="ph-bold ph-file-text"></i>
+                        <span>Vista Previa A4</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="saveCurrentFicha()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-floppy-disk"></i>
+                        <span class="hidden sm:inline">Guardar</span>
+                    </button>
+                    <button onclick="triggerPrint()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-printer"></i>
+                        <span>Imprimir / PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notification Toast Container (Se le añade la clase 'no-print' para evitar su captura al imprimir) -->
+            <div id="toast" class="hidden no-print fixed bottom-5 right-5 bg-navy-900 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-3 border border-slate-700 transition-all duration-300">
+                <i id="toastIcon" class="ph-bold ph-check-circle text-emerald-400 text-xl"></i>
+                <span id="toastMsg" class="text-sm font-medium">Acción completada</span>
+            </div>
+
+            <!-- TAB 1: FORM EDITOR -->
+            <div id="formTab" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6 no-print">
+                
+                <!-- Section 1: Top Bar Metadata -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
+                    <div>
+                        <h2 class="text-xl font-bold text-navy-900">Ficha de Asesoría de Tesis</h2>
+                        <p class="text-xs text-slate-500">Complete los datos de la reunión de seguimiento</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg">
+                        <label class="text-xs font-semibold text-blue-900 uppercase">Nro. Ficha:</label>
+                        <input type="text" id="nro" class="w-24 bg-white border border-blue-300 rounded px-2 py-0.5 text-sm font-bold text-navy-900 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="001-2026">
+                    </div>
+                </div>
+
+                <!-- Section: Datos Generales -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span> 1. Datos Generales
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Facultad</label>
+                            <input type="text" id="facultad" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. Facultad de Ingeniería y Arquitectura">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Escuela Profesional</label>
+                            <input type="text" id="escuela" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. Ingeniería de Sistemas">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tesista(s)</label>
+                            <input type="text" id="tesista" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Nombres completos de los tesistas">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Título de la Tesis</label>
+                            <textarea id="tituloTesis" rows="2" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Título completo de la investigación"></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Asesor(a)</label>
+                            <input type="text" id="asesor" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Nombre completo del Asesor(a)">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Asesoría (Automática)</label>
+                            <input type="date" id="fechaAsesoria" readonly class="w-full border border-slate-300 bg-slate-100 text-slate-600 rounded-lg p-2 text-sm cursor-not-allowed focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Hora</label>
+                            <input type="time" id="hora" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Modalidad</label>
+                            <div class="flex items-center gap-6 mt-1">
+                                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input type="radio" name="modalidad" value="Presencial" checked class="text-blue-600 focus:ring-blue-500">
+                                    <span>Presencial</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input type="radio" name="modalidad" value="Virtual" class="text-blue-600 focus:ring-blue-500">
+                                    <span>Virtual</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Contenido de la Asesoría -->
+                <div class="space-y-4 pt-4 border-t border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span> 2. Contenido de la Asesoría
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Temas o aspectos tratados</label>
+                            <textarea id="temasTratados" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Puntos discutidos en la reunión..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Observaciones del Asesor</label>
+                            <textarea id="observaciones" rows="4" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Comentarios, correcciones o aclaraciones..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Recomendaciones o compromisos del tesista</label>
+                            <textarea id="recomendaciones" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Tareas a entregar para la siguiente revisión..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Firma y Seguimiento -->
+                <div class="space-y-4 pt-4 border-t border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span> 3. Firma de Conformidad y Próxima Citación
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Canvas Firma Asesor -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-semibold text-slate-600">Firma Asesor(a)</label>
+                                <button type="button" onclick="clearSignature('canvasAsesor')" class="text-xs text-red-500 hover:underline">Limpiar firma</button>
+                            </div>
+                            <div class="border border-slate-300 rounded-lg bg-slate-50 relative">
+                                <canvas id="canvasAsesor" width="350" height="120" class="w-full h-28 touch-none cursor-crosshair rounded-lg"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Firma Tesista -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-semibold text-slate-600">Firma Tesista(s)</label>
+                                <button type="button" onclick="clearSignature('canvasTesista')" class="text-xs text-red-500 hover:underline">Limpiar firma</button>
+                            </div>
+                            <div class="border border-slate-300 rounded-lg bg-slate-50 relative">
+                                <canvas id="canvasTesista" width="350" height="120" class="w-full h-28 touch-none cursor-crosshair rounded-lg"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de la próxima asesoría</label>
+                            <input type="date" id="fechaProxima" class="w-full md:w-1/2 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: A4 DOCUMENT PREVIEW (PRINT COMPATIBLE) -->
+            <div id="previewTab" class="hidden flex justify-center overflow-x-auto pb-8">
+                <div id="a4Page" class="page-a4 bg-white shadow-xl border border-slate-300 text-black w-[210mm] min-h-[297mm] p-[1.8cm] flex flex-col justify-between font-serif text-[11pt] leading-relaxed">
+                    <div>
+                        <!-- Header Document -->
+                        <div class="flex justify-between items-center mb-8 border-b-2 border-black pb-4">
+                            <div class="w-full text-center pr-4">
+                                <h2 class="text-xl font-bold uppercase tracking-wide font-sans text-slate-900">FICHA DE ASESORÍA DE TESIS</h2>
+                            </div>
+                            <div class="border-2 border-black px-4 py-2 min-w-[130px] text-right bg-slate-50 shrink-0">
+                                <span class="font-bold text-sm block font-sans">Nro. <span id="pvNro" class="text-base">______</span></span>
+                            </div>
+                        </div>
+
+                        <!-- 1. Datos Generales -->
+                        <div class="mb-6 space-y-2">
+                            <h3 class="font-bold font-sans text-sm uppercase text-slate-900">1. Datos Generales</h3>
+                            
+                            <div class="flex items-baseline">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Facultad:</span>
+                                <span id="pvFacultad" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]"></span>
+                            </div>
+
+                            <div class="flex items-baseline">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Escuela Profesional:</span>
+                                <span id="pvEscuela" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]"></span>
+                            </div>
+
+                            <div class="flex items-baseline">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Tesista(s):</span>
+                                <span id="pvTesista" class="border-b border-dotted border-black flex-1 min-h-[1.2rem] font-medium"></span>
+                            </div>
+
+                            <div class="flex items-baseline">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Título de la Tesis:</span>
+                                <span id="pvTitulo" class="border-b border-dotted border-black flex-1 min-h-[1.2rem] italic"></span>
+                            </div>
+
+                            <div class="flex items-baseline">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Asesor(a):</span>
+                                <span id="pvAsesor" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]"></span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 pt-1">
+                                <div class="flex items-baseline">
+                                    <span class="font-bold w-36 shrink-0 font-sans text-sm">Fecha de Asesoría:</span>
+                                    <span id="pvFecha" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]">__ / __ / ____</span>
+                                </div>
+                                <div class="flex items-baseline">
+                                    <span class="font-bold w-16 shrink-0 font-sans text-sm">Hora:</span>
+                                    <span id="pvHora" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]">____</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-baseline pt-1">
+                                <span class="font-bold w-44 shrink-0 font-sans text-sm">Modalidad:</span>
+                                <div class="flex items-center gap-6 font-sans text-sm">
+                                    <span>[ <span id="pvModPresencial"> </span> ] Presencial</span>
+                                    <span>[ <span id="pvModVirtual"> </span> ] Virtual</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Contenido de la Asesoría -->
+                        <div class="mb-6 space-y-3">
+                            <h3 class="font-bold font-sans text-sm uppercase text-slate-900">2. Contenido de la Asesoría</h3>
+
+                            <div>
+                                <p class="font-bold font-sans text-sm mb-1">• Temas o aspectos tratados:</p>
+                                <div id="pvTemas" class="min-h-[4rem] text-justify leading-relaxed pl-4 border-l-2 border-slate-200 whitespace-pre-wrap italic"></div>
+                            </div>
+
+                            <div>
+                                <p class="font-bold font-sans text-sm mb-1">• Observaciones del Asesor:</p>
+                                <div id="pvObservaciones" class="min-h-[5rem] text-justify leading-relaxed pl-4 border-l-2 border-slate-200 whitespace-pre-wrap italic"></div>
+                            </div>
+
+                            <div>
+                                <p class="font-bold font-sans text-sm mb-1">• Recomendaciones o compromisos del tesista:</p>
+                                <div id="pvRecomendaciones" class="min-h-[4rem] text-justify leading-relaxed pl-4 border-l-2 border-slate-200 whitespace-pre-wrap italic"></div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Firma de Conformidad -->
+                        <div class="mb-4 space-y-6">
+                            <h3 class="font-bold font-sans text-sm uppercase text-slate-900">3. Firma de Conformidad</h3>
+
+                            <div class="grid grid-cols-2 gap-8 pt-8">
+                                <!-- Signature Box 1 -->
+                                <div class="flex flex-col items-center">
+                                    <div class="h-16 w-full flex items-end justify-center pb-1">
+                                        <img id="pvImgAsesor" class="max-h-full max-w-full object-contain hidden" alt="Firma Asesor">
+                                    </div>
+                                    <div class="border-t border-black w-4/5 text-center pt-1">
+                                        <p class="font-bold font-sans text-xs">• Asesor(a)</p>
+                                    </div>
+                                </div>
+
+                                <!-- Signature Box 2 -->
+                                <div class="flex flex-col items-center">
+                                    <div class="h-16 w-full flex items-end justify-center pb-1">
+                                        <img id="pvImgTesista" class="max-h-full max-w-full object-contain hidden" alt="Firma Tesista">
+                                    </div>
+                                    <div class="border-t border-black w-4/5 text-center pt-1">
+                                        <p class="font-bold font-sans text-xs">• Tesista(s)</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-baseline pt-4">
+                                <span class="font-bold w-56 shrink-0 font-sans text-sm">• Fecha de la próxima asesoría:</span>
+                                <span id="pvFechaProxima" class="border-b border-dotted border-black flex-1 min-h-[1.2rem]">__ / __ / ____</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Web Application Footer (no-print para ocultar al imprimir) -->
+    <footer class="bg-slate-800 text-slate-300 py-4 px-6 text-center text-xs no-print border-t border-slate-700 mt-auto">
+        <p class="font-semibold text-slate-200">Yury Limachi Cartolin</p>
+        <p class="text-slate-400">Coordinación de investigación de la filial Andahuaylas</p>
+    </footer>
+
+    <script>
+        // Application State
+        let fichas = [];
+        let currentId = null;
+
+        // Canvas Contexts
+        let canvasAsesor, ctxAsesor;
+        let canvasTesista, ctxTesista;
+        let isDrawingAsesor = false;
+        let isDrawingTesista = false;
+
+        // Init App on Window Load
+        window.onload = function () {
+            initCanvases();
+            loadStoredFichas();
+            if (fichas.length === 0) {
+                createNewFicha();
+            } else {
+                loadFichaIntoForm(fichas[0].id);
+            }
+        };
+
+        // Initialize Signature Canvases
+        function initCanvases() {
+            canvasAsesor = document.getElementById('canvasAsesor');
+            ctxAsesor = canvasAsesor.getContext('2d');
+            setupCanvasDrawing(canvasAsesor, ctxAsesor, () => isDrawingAsesor, v => isDrawingAsesor = v);
+
+            canvasTesista = document.getElementById('canvasTesista');
+            ctxTesista = canvasTesista.getContext('2d');
+            setupCanvasDrawing(canvasTesista, ctxTesista, () => isDrawingTesista, v => isDrawingTesista = v);
+        }
+
+        // Helper to setup touch and mouse drawing on Canvas
+        function setupCanvasDrawing(canvas, ctx, getDrawingState, setDrawingState) {
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#0f172a';
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            function startDraw(e) {
+                setDrawingState(true);
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            }
+
+            function draw(e) {
+                if (!getDrawingState()) return;
+                e.preventDefault();
+                const pos = getPos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            }
+
+            function stopDraw() {
+                setDrawingState(false);
+            }
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            window.addEventListener('mouseup', stopDraw);
+
+            canvas.addEventListener('touchstart', startDraw);
+            canvas.addEventListener('touchmove', draw);
+            window.addEventListener('touchend', stopDraw);
+        }
+
+        function clearSignature(canvasId) {
+            if (canvasId === 'canvasAsesor') {
+                ctxAsesor.clearRect(0, 0, canvasAsesor.width, canvasAsesor.height);
+            } else {
+                ctxTesista.clearRect(0, 0, canvasTesista.width, canvasTesista.height);
+            }
+        }
+
+        // Tab Switching Logic
+        function switchTab(tab) {
+            const formTab = document.getElementById('formTab');
+            const previewTab = document.getElementById('previewTab');
+            const tabFormBtn = document.getElementById('tabFormBtn');
+            const tabPreviewBtn = document.getElementById('tabPreviewBtn');
+
+            if (tab === 'form') {
+                formTab.classList.remove('hidden');
+                previewTab.classList.add('hidden');
+
+                tabFormBtn.className = "px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 bg-white shadow-sm text-navy-900";
+                tabPreviewBtn.className = "px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 text-slate-600 hover:text-slate-900";
+            } else {
+                updatePreviewFromForm();
+                formTab.classList.add('hidden');
+                previewTab.classList.remove('hidden');
+
+                tabPreviewBtn.className = "px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 bg-white shadow-sm text-navy-900";
+                tabFormBtn.className = "px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 text-slate-600 hover:text-slate-900";
+            }
+        }
+
+        // LocalStorage & State Functions
+        function loadStoredFichas() {
+            try {
+                const data = localStorage.getItem('tesis_fichas_db');
+                fichas = data ? JSON.parse(data) : [];
+            } catch (e) {
+                fichas = [];
+            }
+            renderFichasList();
+        }
+
+        function saveStoredFichas() {
+            localStorage.setItem('tesis_fichas_db', JSON.stringify(fichas));
+            renderFichasList();
+        }
+
+        function createNewFicha() {
+            currentId = 'ficha_' + Date.now();
+            
+            // Clear Form
+            document.getElementById('nro').value = `00${fichas.length + 1}-2026`;
+            document.getElementById('facultad').value = '';
+            document.getElementById('escuela').value = '';
+            document.getElementById('tesista').value = '';
+            document.getElementById('tituloTesis').value = '';
+            document.getElementById('asesor').value = '';
+            
+            // Cargar automáticamente la fecha actual desde la web/navegador
+            document.getElementById('fechaAsesoria').value = new Date().toISOString().split('T')[0];
+            
+            document.getElementById('hora').value = '10:00';
+            document.querySelector('input[name="modalidad"][value="Presencial"]').checked = true;
+            document.getElementById('temasTratados').value = '';
+            document.getElementById('observaciones').value = '';
+            document.getElementById('recomendaciones').value = '';
+            document.getElementById('fechaProxima').value = '';
+
+            clearSignature('canvasAsesor');
+            clearSignature('canvasTesista');
+
+            switchTab('form');
+            showToast('Nueva ficha creada', 'ph-plus-circle');
+        }
+
+        function getFormData() {
+            return {
+                id: currentId || ('ficha_' + Date.now()),
+                nro: document.getElementById('nro').value || '---',
+                facultad: document.getElementById('facultad').value,
+                escuela: document.getElementById('escuela').value,
+                tesista: document.getElementById('tesista').value,
+                tituloTesis: document.getElementById('tituloTesis').value,
+                asesor: document.getElementById('asesor').value,
+                fechaAsesoria: document.getElementById('fechaAsesoria').value,
+                hora: document.getElementById('hora').value,
+                modalidad: document.querySelector('input[name="modalidad"]:checked')?.value || 'Presencial',
+                temasTratados: document.getElementById('temasTratados').value,
+                observaciones: document.getElementById('observaciones').value,
+                recomendaciones: document.getElementById('recomendaciones').value,
+                fechaProxima: document.getElementById('fechaProxima').value,
+                signatureAsesor: canvasAsesor.toDataURL(),
+                signatureTesista: canvasTesista.toDataURL(),
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        function saveCurrentFicha() {
+            const data = getFormData();
+            const index = fichas.findIndex(f => f.id === data.id);
+
+            if (index >= 0) {
+                fichas[index] = data;
+            } else {
+                fichas.unshift(data);
+            }
+
+            currentId = data.id;
+            saveStoredFichas();
+            showToast('Ficha guardada correctamente', 'ph-check-circle');
+        }
+
+        function loadFichaIntoForm(id) {
+            const ficha = fichas.find(f => f.id === id);
+            if (!ficha) return;
+
+            currentId = ficha.id;
+            document.getElementById('nro').value = ficha.nro || '';
+            document.getElementById('facultad').value = ficha.facultad || '';
+            document.getElementById('escuela').value = ficha.escuela || '';
+            document.getElementById('tesista').value = ficha.tesista || '';
+            document.getElementById('tituloTesis').value = ficha.tituloTesis || '';
+            document.getElementById('asesor').value = ficha.asesor || '';
+            
+            // Asigna la fecha guardada o en su defecto la fecha de hoy
+            document.getElementById('fechaAsesoria').value = ficha.fechaAsesoria || new Date().toISOString().split('T')[0];
+            document.getElementById('hora').value = ficha.hora || '';
+            
+            const modRadio = document.querySelector(`input[name="modalidad"][value="${ficha.modalidad}"]`);
+            if (modRadio) modRadio.checked = true;
+
+            document.getElementById('temasTratados').value = ficha.temasTratados || '';
+            document.getElementById('observaciones').value = ficha.observaciones || '';
+            document.getElementById('recomendaciones').value = ficha.recomendaciones || '';
+            document.getElementById('fechaProxima').value = ficha.fechaProxima || '';
+
+            // Render Signatures to canvas
+            clearSignature('canvasAsesor');
+            if (ficha.signatureAsesor) {
+                const imgA = new Image();
+                imgA.onload = () => ctxAsesor.drawImage(imgA, 0, 0);
+                imgA.src = ficha.signatureAsesor;
+            }
+
+            clearSignature('canvasTesista');
+            if (ficha.signatureTesista) {
+                const imgT = new Image();
+                imgT.onload = () => ctxTesista.drawImage(imgT, 0, 0);
+                imgT.src = ficha.signatureTesista;
+            }
+
+            renderFichasList();
+        }
+
+        function deleteFicha(id, event) {
+            event.stopPropagation();
+            if (confirm('¿Está seguro de eliminar esta ficha?')) {
+                fichas = fichas.filter(f => f.id !== id);
+                saveStoredFichas();
+                if (currentId === id) {
+                    if (fichas.length > 0) {
+                        loadFichaIntoForm(fichas[0].id);
+                    } else {
+                        createNewFicha();
+                    }
+                }
+                showToast('Ficha eliminada', 'ph-trash');
+            }
+        }
+
+        function confirmClearAll() {
+            if (confirm('¿Desea eliminar TODAS las fichas guardadas?')) {
+                fichas = [];
+                saveStoredFichas();
+                createNewFicha();
+                showToast('Base de datos reiniciada', 'ph-trash');
+            }
+        }
+
+        // UI List Renderer
+        function renderFichasList() {
+            const container = document.getElementById('fichasContainer');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const countLabel = document.getElementById('recordCount');
+
+            const filtered = fichas.filter(f => 
+                (f.tesista && f.tesista.toLowerCase().includes(search)) ||
+                (f.nro && f.nro.toLowerCase().includes(search)) ||
+                (f.temasTratados && f.temasTratados.toLowerCase().includes(search))
+            );
+
+            countLabel.textContent = `${filtered.length} Ficha(s)`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="ph-bold ph-folder-open text-3xl mb-1"></i>
+                        <p class="text-xs">No se encontraron fichas</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(f => {
+                const isActive = f.id === currentId;
+                return `
+                    <div onclick="loadFichaIntoForm('${f.id}')" 
+                         class="p-3 rounded-lg border transition cursor-pointer relative group ${
+                             isActive 
+                             ? 'bg-blue-50 border-blue-300 shadow-sm' 
+                             : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                         }">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-xs font-bold ${isActive ? 'text-blue-900' : 'text-slate-700'}">
+                                ${f.nro || 'Sin N°'}
+                            </span>
+                            <span class="text-[10px] text-slate-400">
+                                ${f.fechaAsesoria || ''}
+                            </span>
+                        </div>
+                        <h4 class="text-sm font-semibold text-slate-800 truncate leading-tight">
+                            ${f.tesista || 'Tesista no asignado'}
+                        </h4>
+                        <p class="text-xs text-slate-500 truncate mt-1">
+                            ${f.temasTratados || 'Sin temas registrados...'}
+                        </p>
+                        
+                        <button onclick="deleteFicha('${f.id}', event)" 
+                                class="absolute right-2 bottom-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1">
+                            <i class="ph-bold ph-trash text-sm"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Live Update Preview Data
+        function updatePreviewFromForm() {
+            const data = getFormData();
+
+            document.getElementById('pvNro').textContent = data.nro || '______';
+            document.getElementById('pvFacultad').textContent = data.facultad || '';
+            document.getElementById('pvEscuela').textContent = data.escuela || '';
+            document.getElementById('pvTesista').textContent = data.tesista || '';
+            document.getElementById('pvTitulo').textContent = data.tituloTesis || '';
+            document.getElementById('pvAsesor').textContent = data.asesor || '';
+            
+            // Format dates
+            document.getElementById('pvFecha').textContent = data.fechaAsesoria ? formatDate(data.fechaAsesoria) : '__ / __ / ____';
+            document.getElementById('pvHora').textContent = data.hora || '____';
+
+            document.getElementById('pvModPresencial').textContent = data.modalidad === 'Presencial' ? 'X' : ' ';
+            document.getElementById('pvModVirtual').textContent = data.modalidad === 'Virtual' ? 'X' : ' ';
+
+            document.getElementById('pvTemas').textContent = data.temasTratados || '';
+            document.getElementById('pvObservaciones').textContent = data.observaciones || '';
+            document.getElementById('pvRecomendaciones').textContent = data.recomendaciones || '';
+
+            document.getElementById('pvFechaProxima').textContent = data.fechaProxima ? formatDate(data.fechaProxima) : '__ / __ / ____';
+
+            // Render Signatures into Document Preview
+            const imgAsesor = document.getElementById('pvImgAsesor');
+            if (data.signatureAsesor && data.signatureAsesor.length > 1000) {
+                imgAsesor.src = data.signatureAsesor;
+                imgAsesor.classList.remove('hidden');
+            } else {
+                imgAsesor.classList.add('hidden');
+            }
+
+            const imgTesista = document.getElementById('pvImgTesista');
+            if (data.signatureTesista && data.signatureTesista.length > 1000) {
+                imgTesista.src = data.signatureTesista;
+                imgTesista.classList.remove('hidden');
+            } else {
+                imgTesista.classList.add('hidden');
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '__ / __ / ____';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // Print Trigger
+        function triggerPrint() {
+            saveCurrentFicha();
+            switchTab('preview');
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        // Demo Data Loader
+        function loadDemoData() {
+            document.getElementById('nro').value = '004-2026';
+            document.getElementById('facultad').value = 'Facultad de Ingeniería y Arquitectura';
+            document.getElementById('escuela').value = 'Escuela Profesional de Ingeniería de Sistemas';
+            document.getElementById('tesista').value = 'Juan Carlos Pérez Gómez';
+            document.getElementById('tituloTesis').value = 'Implementación de un sistema web integral para la optimización de trámites académicos universitarios mediante arquitectura Cloud Native.';
+            document.getElementById('asesor').value = 'Dr. Roberto Mendoza Silva';
+            
+            // Asignar fecha actual automática en demo
+            document.getElementById('fechaAsesoria').value = new Date().toISOString().split('T')[0];
+            document.getElementById('hora').value = '11:30';
+            document.querySelector('input[name="modalidad"][value="Presencial"]').checked = true;
+
+            document.getElementById('temasTratados').value = '1. Revisión del Capítulo III: Metodología y Arquitectura de Software.\n2. Definición del marco muestral para las pruebas de usabilidad.\n3. Evaluación de diagramas de secuencia e itinerario de despliegue en AWS.';
+            document.getElementById('observaciones').value = 'El avance del capítulo metodológico presenta buena consistencia lógica. Se debe precisar la métrica para evaluar la latencia de las peticiones API y ajustar la redacción de los objetivos específicos conforme al estándar ISO/IEC 25010.';
+            document.getElementById('recomendaciones').value = '1. Incorporar el diagrama de arquitectura actualizado en formato vectorial.\n2. Aplicar la encuesta piloto de usabilidad a un grupo de 15 usuarios.\n3. Traer matriz de consistencia revisada para la siguiente cita.';
+            document.getElementById('fechaProxima').value = '2026-10-29';
+
+            saveCurrentFicha();
+            showToast('Datos demo cargados con éxito', 'ph-magic-wand');
+        }
+
+        // Toast Helper
+        function showToast(msg, iconClass = 'ph-check-circle') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = msg;
+            toastIcon.className = `ph-bold ${iconClass} text-emerald-400 text-xl`;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
