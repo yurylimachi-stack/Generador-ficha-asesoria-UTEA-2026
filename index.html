@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de ficha de Asesoría de Tesis</title>
+    <title>Plataforma de Asesoría de Tesis</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
@@ -89,7 +89,7 @@
                     <img src="https://cusco.utea.edu.pe/wp-content/uploads/2022/01/logo-utea-cusco.png" alt="Logo UTEA" class="h-9 w-auto object-contain">
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight">Generador de ficha de Asesoría de Tesis</h1>
+                    <h1 class="font-bold text-lg leading-tight">Sistema de Asesoría de Tesis</h1>
                     <p class="text-xs text-slate-300">Gestión e Impresión de Fichas Oficiales</p>
                 </div>
             </div>
@@ -151,6 +151,10 @@
                     <button onclick="saveCurrentFicha()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-floppy-disk"></i>
                         <span class="hidden sm:inline">Guardar</span>
+                    </button>
+                    <button onclick="downloadFichaHTML()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-download-simple"></i>
+                        <span>Descargar</span>
                     </button>
                     <button onclick="triggerPrint()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-printer"></i>
@@ -775,7 +779,24 @@
             if (!dateStr) return '__ / __ / ____';
             const parts = dateStr.split('-');
             if (parts.length !== 3) return dateStr;
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return `${parts[2]}/${parts[1]}/${parts0]}`;
+        }
+
+        // Download HTML File Trigger
+        function downloadFichaHTML() {
+            saveCurrentFicha();
+            const data = getFormData();
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Ficha_Asesoria_${data.nro.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Ficha descargada en formato HTML', 'ph-download-simple');
         }
 
         // Print Trigger
