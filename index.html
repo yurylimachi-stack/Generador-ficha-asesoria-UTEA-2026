@@ -135,7 +135,7 @@
         <main class="flex-1 flex flex-col min-w-0">
             
             <!-- Tab Navigation (No Print) -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 mb-4 flex items-center justify-between no-print">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 mb-4 flex items-center justify-between no-print flex-wrap gap-2">
                 <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
                     <button id="tabFormBtn" onclick="switchTab('form')" class="px-4 py-1.5 text-sm font-medium rounded-md transition flex items-center gap-2 bg-white shadow-sm text-navy-900">
                         <i class="ph-bold ph-note-pencil"></i>
@@ -147,10 +147,14 @@
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <button onclick="saveCurrentFicha()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-floppy-disk"></i>
                         <span class="hidden sm:inline">Guardar</span>
+                    </button>
+                    <button onclick="openEmailModal()" class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-envelope"></i>
+                        <span>Enviar Correo</span>
                     </button>
                     <button onclick="downloadFichaHTML()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-download-simple"></i>
@@ -167,6 +171,44 @@
             <div id="toast" class="hidden no-print fixed bottom-5 right-5 bg-navy-900 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-3 border border-slate-700 transition-all duration-300">
                 <i id="toastIcon" class="ph-bold ph-check-circle text-emerald-400 text-xl"></i>
                 <span id="toastMsg" class="text-sm font-medium">Acción completada</span>
+            </div>
+
+            <!-- Modal Enviar Correo -->
+            <div id="emailModal" class="hidden no-print fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <i class="ph-bold ph-envelope text-blue-600"></i> Enviar Ficha por Correo
+                        </h3>
+                        <button onclick="closeEmailModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                            <i class="ph-bold ph-x"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Para (Correo Principal):</label>
+                            <input type="email" id="emailTo" placeholder="ejemplo@utea.edu.pe" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[11px] text-slate-500 mt-0.5">Puedes colocar varios correos separados por coma.</p>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Con Copia (CC):</label>
+                            <input type="text" id="emailCc" placeholder="asesor@utea.edu.pe, coordinacion@utea.edu.pe" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[11px] text-slate-500 mt-0.5">Opcional. Separa varios correos con comas.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t">
+                        <button onclick="closeEmailModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium transition text-xs">
+                            Cancelar
+                        </button>
+                        <button onclick="sendEmailMailto()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition text-xs flex items-center gap-1.5">
+                            <i class="ph-bold ph-paper-plane-tilt"></i>
+                            <span>Abrir Correo</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 1: FORM EDITOR -->
@@ -779,7 +821,53 @@
             if (!dateStr) return '__ / __ / ____';
             const parts = dateStr.split('-');
             if (parts.length !== 3) return dateStr;
-            return `${parts[2]}/${parts[1]}/${parts0]}`;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // Email Modal Controls
+        function openEmailModal() {
+            saveCurrentFicha();
+            document.getElementById('emailModal').classList.remove('hidden');
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.add('hidden');
+        }
+
+        function sendEmailMailto() {
+            const data = getFormData();
+            const to = document.getElementById('emailTo').value.trim();
+            const cc = document.getElementById('emailCc').value.trim();
+
+            if (!to) {
+                alert('Por favor, ingrese al menos un correo principal (Para:).');
+                return;
+            }
+
+            const subject = encodeURIComponent(`Ficha de Asesoría N° ${data.nro} - ${data.tesista || 'Tesista'}`);
+            
+            let bodyText = `FICHA DE ASESORÍA DE TESIS N° ${data.nro}\n\n`;
+            bodyText += `• Tesista(s): ${data.tesista || 'N/A'}\n`;
+            bodyText += `• Asesor(a): ${data.asesor || 'N/A'}\n`;
+            bodyText += `• Título: ${data.tituloTesis || 'N/A'}\n`;
+            bodyText += `• Fecha de Asesoría: ${formatDate(data.fechaAsesoria)}\n`;
+            bodyText += `• Modalidad: ${data.modalidad}\n\n`;
+            bodyText += `--- TEMAS TRATADOS ---\n${data.temasTratados || 'Sin registros'}\n\n`;
+            bodyText += `--- OBSERVACIONES DEL ASESOR ---\n${data.observaciones || 'Sin observaciones'}\n\n`;
+            bodyText += `--- RECOMENDACIONES / COMPROMISOS ---\n${data.recomendaciones || 'Sin recomendaciones'}\n\n`;
+            bodyText += `• Próxima Asesoría: ${formatDate(data.fechaProxima)}\n\n`;
+            bodyText += `Atentamente,\nCoordinación de Investigación - Filial Andahuaylas`;
+
+            const body = encodeURIComponent(bodyText);
+
+            let mailtoUrl = `mailto:${to}?subject=${subject}&body=${body}`;
+            if (cc) {
+                mailtoUrl += `&cc=${encodeURIComponent(cc)}`;
+            }
+
+            window.location.href = mailtoUrl;
+            closeEmailModal();
+            showToast('Abriendo gestor de correo...', 'ph-envelope');
         }
 
         // Download HTML File Trigger
