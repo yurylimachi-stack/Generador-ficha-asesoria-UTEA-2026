@@ -10,6 +10,8 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- html2pdf Library para generar PDF del elemento A4 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -156,9 +158,9 @@
                         <i class="ph-bold ph-envelope"></i>
                         <span>Enviar Correo</span>
                     </button>
-                    <button onclick="downloadFichaHTML()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
-                        <i class="ph-bold ph-download-simple"></i>
-                        <span>Descargar</span>
+                    <button onclick="downloadFichaPDF()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <i class="ph-bold ph-file-pdf"></i>
+                        <span>Descargar PDF</span>
                     </button>
                     <button onclick="triggerPrint()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
                         <i class="ph-bold ph-printer"></i>
@@ -336,14 +338,16 @@
                 </div>
             </div>
 
-            <!-- TAB 2: A4 DOCUMENT PREVIEW (PRINT COMPATIBLE) -->
+            <!-- TAB 2: A4 DOCUMENT PREVIEW (PRINT & PDF DOWNLOAD COMPATIBLE) -->
             <div id="previewTab" class="hidden flex justify-center overflow-x-auto pb-8">
                 <div id="a4Page" class="page-a4 bg-white shadow-xl border border-slate-300 text-black w-[210mm] min-h-[297mm] p-[1.8cm] flex flex-col justify-between font-serif text-[11pt] leading-relaxed">
                     <div>
-                        <!-- Header Document -->
+                        <!-- Header Document A4 con Nombre Oficial UTEA Filial Andahuaylas -->
                         <div class="flex justify-between items-center mb-8 border-b-2 border-black pb-4">
-                            <div class="w-full text-center pr-4">
-                                <h2 class="text-xl font-bold uppercase tracking-wide font-sans text-slate-900">FICHA DE ASESORÍA DE TESIS</h2>
+                            <div class="w-full text-center pr-4 font-sans">
+                                <h1 class="text-base font-bold uppercase tracking-wider text-slate-900">UNIVERSIDAD TECNOLÓGICA DE LOS ANDES</h1>
+                                <p class="text-xs font-semibold text-slate-700 tracking-wide">FILIAL ANDAHUAYLAS</p>
+                                <h2 class="text-lg font-bold uppercase tracking-wide text-slate-900 mt-2">FICHA DE ASESORÍA DE TESIS</h2>
                             </div>
                             <div class="border-2 border-black px-4 py-2 min-w-[130px] text-right bg-slate-50 shrink-0">
                                 <span class="font-bold text-sm block font-sans">Nro. <span id="pvNro" class="text-base">______</span></span>
@@ -846,7 +850,8 @@
 
             const subject = encodeURIComponent(`Ficha de Asesoría N° ${data.nro} - ${data.tesista || 'Tesista'}`);
             
-            let bodyText = `FICHA DE ASESORÍA DE TESIS N° ${data.nro}\n\n`;
+            let bodyText = `UNIVERSIDAD TECNOLÓGICA DE LOS ANDES - FILIAL ANDAHUAYLAS\n`;
+            bodyText += `FICHA DE ASESORÍA DE TESIS N° ${data.nro}\n\n`;
             bodyText += `• Tesista(s): ${data.tesista || 'N/A'}\n`;
             bodyText += `• Asesor(a): ${data.asesor || 'N/A'}\n`;
             bodyText += `• Título: ${data.tituloTesis || 'N/A'}\n`;
@@ -870,21 +875,32 @@
             showToast('Abriendo gestor de correo...', 'ph-envelope');
         }
 
-        // Download HTML File Trigger
-        function downloadFichaHTML() {
+        // Exclusiva descarga del elemento A4 en PDF usando html2pdf.js
+        function downloadFichaPDF() {
             saveCurrentFicha();
+            updatePreviewFromForm();
+
+            const element = document.getElementById('a4Page');
+
+            showToast('Generando archivo PDF...', 'ph-file-pdf');
+
             const data = getFormData();
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Ficha_Asesoria_${data.nro.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('Ficha descargada en formato HTML', 'ph-download-simple');
+            const fileName = `Ficha_Asesoria_${data.nro.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+
+            const opt = {
+                margin:       0,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast('PDF descargado exitosamente', 'ph-check-circle');
+            }).catch(err => {
+                console.error(err);
+                showToast('Error al generar PDF', 'ph-warning');
+            });
         }
 
         // Print Trigger
